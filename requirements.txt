@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+streamlit
+pandas
+numpy
+python-dotenv
+requests
+pyarrow
+matplotlib
+plotly
+geopandas
