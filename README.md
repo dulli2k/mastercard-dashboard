@@ -9,7 +9,7 @@ This project is a full-stack data application that analyzes anonymized and aggre
 ---
 
 ## 👥 Team Member
-**TheReal ChanelNicole – Solo Developer**
+**Abdul Kamara – Solo Developer**
 
 To meet course requirements, the project is separated into two role tracks even though it is a solo project:
 
