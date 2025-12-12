@@ -1,0 +1,74 @@
+name: CI / CD – Tests, Linting, Deploy
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  tests:
+    name: Run Pytest + flake8
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # if your tests need the package installed, uncomment:
+          # pip install -e .
+
+      - name: Run flake8 (linting)
+        run: |
+          flake8 src tests
+
+      - name: Run Pytest (unit tests)
+        run: |
+          pytest --maxfail=1 --disable-warnings -q
+
+  deploy:
+    name: Build & Deploy (placeholder)
+    needs: tests          # only run if tests + flake8 pass
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python (for optional build steps)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ---- OPTIONAL: Build Docker image for FastAPI backend ----
+      # This shows how you *would* deploy to a cloud host
+      # Uncomment and configure only if you actually set up a registry.
+      #
+      # - name: Log in to Docker registry
+      #   run: |
+      #     echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login \
+      #       -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+
+      # - name: Build Docker image
+      #   run: |
+      #     docker build -t climate-insights-backend -f Dockerfile.backend .
+
+      # - name: Tag + push image (example)
+      #   run: |
+      #     docker tag climate-insights-backend your-registry/climate-insights-backend:${{ github.sha }}
+      #     docker push your-registry/climate-insights-backend:${{ github.sha }}
+
+      - name: Mark deploy as successful (course placeholder)
+        run: |
+          echo "Tests and linting passed. This step represents the deploy stage."
+          echo "In a real deployment, we would push a Docker image or trigger a cloud deploy here."
