@@ -1,306 +1,221 @@
-📊 Metro Atlanta Inclusive Growth Dashboard
+# 📊 Metro Atlanta Inclusive Growth Dashboard
 
-A full-stack data analytics application that visualizes inclusive economic growth across Metro Atlanta using the Mastercard Inclusive Growth Score (IGS) dataset.
-The project combines FastAPI, SQLite, Streamlit, and CI/CD automation to deliver interactive insights for policymakers, researchers, and community stakeholders.
+A full-stack data visualization application analyzing inclusive economic growth across Metro Atlanta using the Mastercard Inclusive Growth Score (IGS) dataset.
 
-🔍 Project Overview
-Goals
+---
 
-Build a full-stack web application to analyze inclusive growth metrics.
+## 📌 Project Overview
 
-Enable exploration at both county and census tract levels.
+The Metro Atlanta Inclusive Growth Dashboard is a full-stack web application designed to help users explore economic, housing, infrastructure, and community well-being trends across Metro Atlanta.
 
-Provide interactive visualizations to identify trends and disparities.
+This project enables policymakers, researchers, and residents to:
+- Compare counties and census tracts over time
+- Identify disparities in economic inclusion
+- Explore trends across housing, economy, and infrastructure
 
-Support ethical, transparent data analysis.
+---
 
-Counties Included
+## 📂 Dataset Description
 
-Fulton County
+**Dataset Used:** Mastercard Inclusive Growth Score (IGS)
 
-DeKalb County
+**Geographic Scope:**
+- Fulton County
+- DeKalb County
+- Cobb County
+- Clayton County
 
-Cobb County
+**Years Covered:** 2020–2024
 
-Clayton County
+**Key Metric Categories:**
+- Inclusive Growth Score
+- Economy
+- Place
+- Community
+- Net Occupancy
+- Affordable Housing
+- Internet Access
+- Small Business Activity
+- Travel Time to Work
 
-Years Analyzed
+All data is aggregated at the census tract level and contains no personally identifiable information (PII).
 
-2020–2024
+---
 
-Key Metric Categories
+## 🏗 Technical Architecture
 
-Inclusive Growth
+### Backend (FastAPI + SQLite)
 
-Economy
+- FastAPI serves as the REST API backend.
+- Cleaned CSV data is loaded into a local SQLite database.
+- SQL queries power all API endpoints.
+- Automatic OpenAPI documentation available at `/docs`.
 
-Place
+**Backend Files:**
+- `app.py` — API routes and request handling
+- `database.py` — SQLite connection and query helpers
+- `load_data.py` — Loads cleaned CSV into SQLite
 
-Community
+---
 
-Net Occupancy
+### Frontend (Streamlit Dashboard)
 
-Affordable Housing
+- Streamlit provides an interactive UI.
+- Dashboard fetches live data from FastAPI via HTTP requests.
+- Users can filter by county and year.
+- Charts and tables update dynamically.
 
-Internet Access
+**Frontend Features:**
+- Line charts for year-over-year trends
+- Bar charts comparing counties
+- Census tract–level tables
+- CSV download option
 
-🏗️ Technical Architecture
-climate-insights-dashboard/
-│
-├── src/
-│   ├── backend/        # FastAPI backend
-│   │   ├── app.py
-│   │   ├── database.py
-│   │   ├── load_data.py
-│   │   └── config.py
-│   │
-│   └── frontend/       # Streamlit dashboard
-│       └── dashboard.py
-│
-├── data/
-│   ├── ga_clean.csv
-│   └── metro_metrics.db
-│
-├── tests/              # Pytest test suite
-│
-├── .github/workflows/
-│   └── ci.yml          # CI/CD pipeline
-│
-├── requirements.txt
-├── README.md
-└── diagrams/
+---
 
-⚙️ Setup Instructions
-1️⃣ Clone the Repository
-git clone https://github.com/dulli2k/mastercard-dashboard.git
-cd climate-insights-dashboard
+## 🔌 API Documentation
 
-2️⃣ Create Virtual Environment
-python -m venv venv
-source venv/bin/activate   # Mac/Linux
-venv\Scripts\activate      # Windows
-
-3️⃣ Install Dependencies
-pip install -r requirements.txt
-
-
-Key Dependencies
-
-fastapi
-
-uvicorn
-
-streamlit
-
-pandas
-
-sqlite3
-
-pytest
-
-flake8
-
-requests
-
-4️⃣ Load the Database
-
-This creates the SQLite database from the cleaned CSV.
-
-python -m src.backend.load_data
-
-
-Database location:
-
-data/metro_metrics.db
-
-5️⃣ Start the FastAPI Backend
-uvicorn src.backend.app:app --reload
-
-
-API runs at: http://localhost:8000
-
-Swagger Docs: http://localhost:8000/docs
-
-6️⃣ Start the Streamlit Dashboard
-
-In a new terminal:
-
-streamlit run src/frontend/dashboard.py
-
-
-Dashboard runs at:
-
-http://localhost:8501
-
-🔌 API Documentation
-Base URL
-http://localhost:8000
-
-🔹 GET /health
-
-Description: Health check
-Response:
-
+### Health Check
+```
+GET /health
+```
+**Response**
+```
 { "status": "ok" }
+```
 
-🔹 GET /counties
+---
 
-Description: List all counties
-Response:
-
+### List Counties
+```
+GET /counties
+```
+**Response**
+```
 ["Clayton County", "Cobb County", "DeKalb County", "Fulton County"]
+```
 
-🔹 GET /years
+---
 
-Description: List available years
-Response:
-
+### List Years
+```
+GET /years
+```
+**Response**
+```
 [2020, 2021, 2022, 2023, 2024]
+```
 
-🔹 GET /summary/county/{county}
+---
 
-Description: Yearly aggregated metrics for a county
+### County Summary
+```
+GET /summary/county/{county_name}
+```
 
-Example:
+Returns yearly averages for key metrics used in trend visualizations.
 
-/summary/county/Fulton County
+---
 
+### County Metrics (Tract-Level)
+```
+GET /metrics/county/{county_name}?year=2023
+```
 
-Response:
+Returns census tract–level metrics for a given county and optional year.
 
-{
-  "county": "Fulton County",
-  "years": [2020, 2021, 2022, 2023, 2024],
-  "metrics": [
-    {
-      "year": 2020,
-      "inclusive_growth_score": 54.3,
-      "economy_score": 58.2,
-      "place_score": 61.1
-    }
-  ]
-}
+---
 
-🔹 GET /metrics/county/{county}?year=YYYY
+## 📈 Dashboard Usage Guide
 
-Description: Tract-level metrics (optional year filter)
+1. Start the FastAPI backend:
+```
+uvicorn src.backend.app:app --reload
+```
 
-Example:
+2. Launch the Streamlit dashboard:
+```
+streamlit run src/frontend/dashboard.py
+```
 
-/metrics/county/Clayton County?year=2022
+3. Use the sidebar to:
+- Select a county
+- Filter by year (or view all years)
 
-📊 Dashboard Usage Guide
-Sidebar Filters
+4. Explore:
+- Yearly trend charts
+- Tract-level data tables
+- County comparisons
 
-County: Select one of the four counties
+5. Download filtered data as CSV for further analysis.
 
-Year: Filter tract-level table or view all years
+---
 
-Visualizations
+## ⚖️ Ethical Considerations & Bias Mitigation
 
-Line Charts – Track trends over time
+- No PII — all data is aggregated at the census tract level.
+- Privacy-first design — no demographic labeling of individuals.
+- No stigmatization — avoids ranking neighborhoods as “good” or “bad.”
+- Contextual interpretation — metrics reflect structural inequities, not individual failure.
+- Transparency — all scores come directly from Mastercard IGS.
 
-Bar Charts – Compare counties
+---
 
-Tables – Census tract–level metrics
+## 🔁 CI/CD Pipeline
 
-Quick Stats – Average scores for selected county
+This project includes a GitHub Actions CI/CD pipeline that:
+- Runs Pytest for backend and frontend tests
+- Enforces PEP 8 standards using flake8
+- Validates builds on every push and pull request
+- Includes a placeholder deploy stage for course requirements
 
-Download CSV – Export filtered data
-
-User Actions
-
-✔ Compare counties
-✔ Track growth trends (2020–2024)
-✔ Identify disparities
-✔ Download datasets
-
-🧪 Testing & Code Quality
-Run Tests
-pytest
-
-Run Linting
-flake8 src
-
-
-Coverage includes:
-
-API endpoints
-
-Database queries
-
-Dashboard helpers
-
-🚀 CI/CD Pipeline
-GitHub Actions Workflow
-
-Located at:
-
+**Workflow File:**
+```
 .github/workflows/ci.yml
+```
 
-Pipeline Stages
+---
 
-Install Dependencies
+## 🚀 Deployment Instructions
 
-Run Pytest
+### Local Deployment
 
-Run flake8
+**Backend**
+```
+uvicorn src.backend.app:app --reload
+```
 
-Deploy Placeholder (Course Requirement)
+**Frontend**
+```
+streamlit run src/frontend/dashboard.py
+```
 
-Pipeline runs automatically on:
+---
 
-push
+### CI/CD Deployment (Course Placeholder)
 
-pull_request
+- Tests and linting run automatically on GitHub.
+- Deployment step currently logs success (no cloud deployment required).
+- Pipeline structure supports future deployment to cloud services.
 
-☁️ Deployment (Optional / Future)
+---
 
-FastAPI
+## 👥 Team Contributions
 
-Google Cloud Run (Dockerized)
+### Backend Lead
+- Designed FastAPI endpoints
+- Built SQLite schema
+- Implemented data loading and testing
+- Optimized query performance
 
-Render / Fly.io
+### Frontend Lead
+- Built Streamlit dashboard UI
+- Integrated API responses
+- Implemented interactive charts and tables
+- Developed CI/CD pipeline and documentation
 
-Streamlit
+---
 
-Streamlit Community Cloud
+## 📜 License
 
-Render
-
-Current course version runs locally with deployment placeholders in CI/CD.
-
-⚖️ Ethical Data Handling
-
-No Personally Identifiable Information (PII)
-
-Aggregated at census tract level
-
-Avoids deficit-based neighborhood labeling
-
-Transparent use of Mastercard IGS data
-
-Contextual interpretation of disparities
-
-👥 Team Contributions
-Backend
-
-FastAPI endpoints
-
-SQLite schema & ingestion
-
-Testing & API documentation
-
-Frontend
-
-Streamlit dashboard
-
-Visualization design
-
-CI/CD automation
-
-Reporting & presentation
-
-📌 License
-
-Educational use only.
+This project is for educational purposes and uses publicly available data from the Mastercard Inclusive Growth Score.
