@@ -1,11 +1,24 @@
-#One place to define paths and shared settings so every other backend file can agree on where things live.
+# src/backend/config.py
 from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Project root: /workspaces/climate-insights-dashboard
-BASE_DIR = Path(__file__).resolve().parents[2]
 
-DATA_DIR = BASE_DIR / "data"
-DATA_DIR.mkdir(exist_ok=True)
+class Settings(BaseSettings):
+    """
+    Central app settings.
 
-CSV_PATH = DATA_DIR / "ga_clean.csv"
-DB_PATH = DATA_DIR / "metro_metrics.db"
+    Reads optional environment variables, but also provides safe defaults
+    for local development + Codespaces.
+    """
+
+    # repo root is 2 levels above src/backend/config.py => .../src/backend/ -> .../
+    BASE_DIR: Path = Path(__file__).resolve().parents[2]
+
+    # Default SQLite DB path (matches your loader)
+    DB_PATH: Path = BASE_DIR / "data" / "metro_metrics.db"
+
+    model_config = SettingsConfigDict(env_prefix="APP_", extra="ignore")
+
+
+# ✅ This is what tests expect to import
+settings = Settings()

@@ -1,54 +1,27 @@
-#Provide small, reusable helpers so the rest of your backend doesn’t have to think about SQLite details.
 import sqlite3
-from typing import Any, Iterator
+from typing import Any
 
-from .config import DB_PATH
+from .config import settings
 
-#Get a DB connection
+
 def get_connection() -> sqlite3.Connection:
-    """
-    Create a new SQLite connection to the metro_metrics database.
-    """
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row  # rows behave like dicts
+    conn = sqlite3.connect(settings.DB_PATH)
+    conn.row_factory = sqlite3.Row
     return conn
 
 
-def get_db() -> Iterator[sqlite3.Connection]:
-    """
-    FastAPI-style dependency that yields a DB connection.
-
-    tests/test_app.py imports this symbol and overrides it with an
-    in-memory test database, so it just needs to exist and work.
-    """
-    conn = get_connection()
-    try:
-        yield conn
-    finally:
-        conn.close()
-
-#normalize parameters
-def _normalize_params(params: Any | None = None) -> Any | None:
-    """
-    Normalize parameters for sqlite3.execute.
-
-    - dict  -> dict (named params)
-    - list/tuple -> as-is (positional params)
-    - single scalar -> (scalar,) tuple
-    """
+def _normalize_params(params: Any | None):
+    # Allow None, tuple/list, or dict params
     if params is None:
         return None
-    if isinstance(params, dict):
+    if isinstance(params, (tuple, list, dict)):
         return params
-    if isinstance(params, (list, tuple)):
-        return params
+    # Single value -> tuple
     return (params,)
 
-#core query function
+
 def query_db(query: str, params: Any | None = None) -> list[dict[str, Any]]:
-    """
-    Run a SELECT query and return a list of dict rows.
-    """
+    """Run a SELECT query and return a list of dict rows."""
     conn = get_connection()
     try:
         cur = conn.cursor()
@@ -66,15 +39,20 @@ def query_db(query: str, params: Any | None = None) -> list[dict[str, Any]]:
 
 
 def fetch_all(query: str, params: Any | None = None) -> list[dict[str, Any]]:
-    """
-    Convenience wrapper to get all rows.
-    """
     return query_db(query, params)
 
 
 def fetch_one(query: str, params: Any | None = None) -> dict[str, Any] | None:
-    """
-    Convenience wrapper to get a single row (or None).
-    """
     rows = query_db(query, params)
     return rows[0] if rows else None
+
+def get_db():
+    """
+    FastAPI-style dependency / test helper.
+    Yields a sqlite connection and guarantees it closes.
+    """
+    conn = get_connection()
+    try:
+        yield conn
+    finally:
+        conn.close()
