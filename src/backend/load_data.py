@@ -1,17 +1,10 @@
+from __future__ import annotations
+
 import sqlite3
-from pathlib import Path
+
 import pandas as pd
 
-from .config import settings
-
-
-# --- Paths ---------------------------------------------------------
-BASE_DIR = settings.BASE_DIR
-DATA_DIR = BASE_DIR / "data"
-DATA_DIR.mkdir(exist_ok=True)
-
-CSV_PATH = DATA_DIR / "ga_clean.csv"
-DB_PATH = settings.DB_PATH
+from .config import CSV_PATH, DB_PATH
 
 
 def main() -> None:
@@ -32,13 +25,14 @@ def main() -> None:
     }
 
     df = df.rename(columns=rename_map)
+
+    # Keep only columns we mapped (avoids extra columns in DB)
     df = df[list(rename_map.values())]
 
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
     cur.execute("DROP TABLE IF EXISTS metro_metrics;")
-
     cur.execute(
         """
         CREATE TABLE metro_metrics (
@@ -58,7 +52,6 @@ def main() -> None:
     )
 
     df.to_sql("metro_metrics", conn, if_exists="append", index=False)
-
     conn.commit()
     conn.close()
 

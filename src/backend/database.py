@@ -1,27 +1,39 @@
-import sqlite3
-from typing import Any
+from __future__ import annotations
 
-from .config import settings
+import sqlite3
+from typing import Any, Dict, Generator, List, Optional
+
+from .config import DB_PATH
 
 
 def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(settings.DB_PATH)
+    """Create a SQLite connection with row access by column name."""
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
-def _normalize_params(params: Any | None):
-    # Allow None, tuple/list, or dict params
+def _normalize_params(params: Any | None) -> Any | None:
+    """
+    Normalize params to something sqlite3 understands:
+    - dict -> dict (named params)
+    - tuple/list -> tuple (positional)
+    - None -> None
+    """
     if params is None:
         return None
-    if isinstance(params, (tuple, list, dict)):
+
+    if isinstance(params, dict):
         return params
-    # Single value -> tuple
-    return (params,)
+
+    if isinstance(params, (list, tuple)):
+        return tuple(params)
+
+    return params
 
 
-def query_db(query: str, params: Any | None = None) -> list[dict[str, Any]]:
-    """Run a SELECT query and return a list of dict rows."""
+def query_db(query: str, params: Any | None = None) -> List[Dict[str, Any]]:
+    """Run a SELECT query and return list[dict] rows."""
     conn = get_connection()
     try:
         cur = conn.cursor()
@@ -38,18 +50,24 @@ def query_db(query: str, params: Any | None = None) -> list[dict[str, Any]]:
         conn.close()
 
 
-def fetch_all(query: str, params: Any | None = None) -> list[dict[str, Any]]:
+def fetch_all(query: str, params: Any | None = None) -> List[Dict[str, Any]]:
+    """Alias for query_db (SELECT returning many)."""
     return query_db(query, params)
 
 
-def fetch_one(query: str, params: Any | None = None) -> dict[str, Any] | None:
+def fetch_one(
+    query: str,
+    params: Any | None = None,
+) -> Optional[Dict[str, Any]]:
+    """Run a SELECT query and return a single row dict or None."""
     rows = query_db(query, params)
     return rows[0] if rows else None
 
-def get_db():
+
+def get_db() -> Generator[sqlite3.Connection, None, None]:
     """
-    FastAPI-style dependency / test helper.
-    Yields a sqlite connection and guarantees it closes.
+    FastAPI dependency generator
+    for a per-request DB connection.
     """
     conn = get_connection()
     try:

@@ -1,45 +1,49 @@
-# Give users an interactive UI to choose a county/year and visualize what the API returns.
-import requests
-import numpy as np
+from __future__ import annotations
+
 import pandas as pd
+import requests
 import streamlit as st
 
-API_URL = "http://localhost:8000"  # FastAPI base URL
+API_URL = "http://localhost:8000"
 
 
-# Helper functions to call the API
 @st.cache_data
-def get_counties():
-    resp = requests.get(f"{API_URL}/counties")
+def get_counties() -> list[str]:
+    resp = requests.get(f"{API_URL}/counties", timeout=30)
     resp.raise_for_status()
     return resp.json()
 
 
 @st.cache_data
-def get_years():
-    resp = requests.get(f"{API_URL}/years")
+def get_years() -> list[int]:
+    resp = requests.get(f"{API_URL}/years", timeout=30)
     resp.raise_for_status()
     return resp.json()
 
 
 @st.cache_data
-def get_summary(county: str):
-    resp = requests.get(f"{API_URL}/summary/county/{county}")
+def get_summary(county: str) -> dict:
+    resp = requests.get(f"{API_URL}/summary/county/{county}", timeout=30)
     resp.raise_for_status()
     return resp.json()
 
 
 @st.cache_data
-def get_county_metrics(county: str, year: int | None = None):
-    params = {}
+def get_county_metrics(county: str, year: int | None = None) -> dict:
+    params: dict = {}
     if year is not None:
         params["year"] = year
-    resp = requests.get(f"{API_URL}/metrics/county/{county}", params=params)
+
+    resp = requests.get(
+        f"{API_URL}/metrics/county/{county}",
+        params=params,
+        timeout=30,
+    )
     resp.raise_for_status()
     return resp.json()
 
 
-def main():
+def main() -> None:
     st.set_page_config(
         page_title="Metro Atlanta Inclusive Growth Dashboard",
         layout="wide",
@@ -48,30 +52,31 @@ def main():
     st.title("📊 Metro Atlanta Inclusive Growth Dashboard")
     st.markdown(
         """
-        This dashboard uses Mastercard **Inclusive Growth Score** data for  
-        **Fulton, DeKalb, Cobb, and Clayton Counties** (Metro Atlanta).
+This dashboard uses Mastercard **Inclusive Growth Score** data for
+**Fulton, DeKalb, Cobb, and Clayton Counties** (Metro Atlanta).
 
-        Use the controls in the sidebar to explore trends over time and compare
-        high-level metrics across counties.
+Use the sidebar controls to explore trends over time and compare
+high-level metrics across counties.
         """
     )
 
-    # Sidebar controls
     counties = get_counties()
     years = get_years()
 
     st.sidebar.header("Filters")
     county = st.sidebar.selectbox("County", counties)
     year_filter = st.sidebar.selectbox(
-        "Year (for tract-level table)", ["All"] + years
+        "Year (for tract table)",
+        ["All"] + years,
     )
+
     year_value = None if year_filter == "All" else int(year_filter)
 
-    # ----- Summary line chart -----------------------------------------
     summary = get_summary(county)
     metrics_df = pd.DataFrame(summary["metrics"])
 
-    st.subheader(f"Yearly Inclusive Growth Metrics – {county}")
+    st.subheader(f"Yearly Inclusive Growth Metrics — {county}")
+
     metric_to_plot = st.selectbox(
         "Metric to visualize",
         [
@@ -90,80 +95,62 @@ def main():
         chart_df = metrics_df[["year", metric_to_plot]].set_index("year")
         st.line_chart(chart_df)
 
-    # --- Tract-level table --------------------------------------------
     st.subheader("Tract-level metrics")
 
-    # Call backend metrics endpoint (this was get_metrics before)
     metrics = get_county_metrics(county, year_value)
+    tracts_df = pd.DataFrame(metrics["rows"])
 
-    # Make a DataFrame from API rows
-    table_df = pd.DataFrame(metrics["rows"])
+    if not tracts_df.empty:
+        st.dataframe(tracts_df)
 
-    # Filter by year on the frontend (if a specific year is selected)
-    if year_value is not None:
-        filtered_df = table_df[table_df["year"] == year_value]
-    else:
-        filtered_df = table_df
-
-    # Show table in dashboard
-    st.dataframe(filtered_df)
-
-    # --- County comparison bar chart (latest year) --------------------
-    latest_year = max(years) if years else None
-    comparison_rows = []
-
-    if latest_year is not None:
-        for c in counties:
-            data = get_county_metrics(c, latest_year)
-            df_c = pd.DataFrame(data["rows"])
-            if not df_c.empty:
-                comparison_rows.append(
-                    {
-                        "County": c,
-                        "Avg Inclusive Growth Score": df_c[
-                            "inclusive_growth_score"
-                        ].mean(),
-                    }
-                )
-
-    if comparison_rows:
-        comparison_df = pd.DataFrame(comparison_rows).set_index("County")
-        st.subheader(f"County comparison – Inclusive Growth ({latest_year})")
-        st.bar_chart(comparison_df)
-
-    # --- Quick stats --------------------------------------------------
-    st.subheader("Quick stats")
-
-    if not filtered_df.empty:
+        st.subheader("Quick stats")
         col1, col2, col3 = st.columns(3)
 
         col1.metric(
-            "Average Inclusive Growth Score",
-            f"{filtered_df['inclusive_growth_score'].mean():.1f}",
+            "Avg Inclusive Growth Score",
+            f"{tracts_df['inclusive_growth_score'].mean():.1f}",
         )
         col2.metric(
-            "Average Affordable Housing Score",
-            f"{filtered_df['affordable_housing_score'].mean():.1f}",
+            "Avg Affordable Housing Score",
+            f"{tracts_df['affordable_housing_score'].mean():.1f}",
         )
         col3.metric(
-            "Average Internet Access Score",
-            f"{filtered_df['internet_access_score'].mean():.1f}",
+            "Avg Internet Access Score",
+            f"{tracts_df['internet_access_score'].mean():.1f}",
         )
-    else:
-        st.write("No data available for this selection.")
 
-    # --- Download CSV button ------------------------------------------
-    csv_bytes = filtered_df.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="Download filtered data as CSV",
-        data=csv_bytes,
-        file_name=(
-            f"{county.replace(' ', '_').lower()}_{year_filter}_metrics.csv"
-            if year_filter != "All"
-            else f"{county.replace(' ', '_').lower()}_all_years_metrics.csv"
-        ),
-        mime="text/csv",
-    )
+        csv_bytes = tracts_df.to_csv(index=False).encode("utf-8")
+        file_stub = county.replace(" ", "_").lower()
+        year_stub = "all_years" if year_value is None else str(year_value)
+        filename = f"{file_stub}_{year_stub}_metrics.csv"
+
+        st.download_button(
+            label="Download data as CSV",
+            data=csv_bytes,
+            file_name=filename,
+            mime="text/csv",
+        )
+
+    st.subheader("County comparison (latest year)")
+    latest_year = max(years)
+
+    comparison_rows: list[dict] = []
+    for cty in counties:
+        data = get_county_metrics(cty, latest_year)
+        df_cty = pd.DataFrame(data["rows"])
+        if not df_cty.empty:
+            comparison_rows.append(
+                {
+                    "County": cty,
+                    "Avg Inclusive Growth Score": (
+                        df_cty["inclusive_growth_score"].mean()
+                    ),
+                }
+            )
+
+    if comparison_rows:
+        comparison_df = pd.DataFrame(comparison_rows).set_index("County")
+        st.bar_chart(comparison_df)
 
 
 if __name__ == "__main__":
